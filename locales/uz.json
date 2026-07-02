@@ -1,0 +1,104 @@
+{
+  "auth": {
+    "login_success": "Tizimga muvaffaqiyatli kirildi",
+    "register_success": "Ro'yxatdan muvaffaqiyatli o'tildi",
+    "logout_success": "Tizimdan muvaffaqiyatli chiqildi",
+    "invalid_credentials": "Email yoki parol noto'g'ri",
+    "token_expired": "Token muddati tugagan",
+    "token_invalid": "Token yaroqsiz",
+    "email_taken": "Bu email allaqachon ro'yxatdan o'tgan",
+    "password_too_short": "Parol kamida 8 ta belgidan iborat bo'lishi kerak",
+    "invalid_email": "Email formati noto'g'ri",
+    "google_auth_failed": "Google autentifikatsiyasi xatosi",
+    "apple_auth_failed": "Apple autentifikatsiyasi xatosi"
+  },
+  "user": {
+    "not_found": "Foydalanuvchi topilmadi",
+    "profile_updated": "Profil yangilandi",
+    "avatar_updated": "Avatar yangilandi",
+    "location_updated": "Joylashuv yangilandi",
+    "account_deleted": "Hisob o'chirildi",
+    "already_banned": "Foydalanuvchi allaqachon bloklangan",
+    "already_suspended": "Foydalanuvchi allaqachon to'xtatilgan"
+  },
+  "post": {
+    "not_found": "E'lon topilmadi",
+    "created": "E'lon yaratildi",
+    "updated": "E'lon yangilandi",
+    "deleted": "E'lon o'chirildi",
+    "not_owner": "Siz bu e'lonning egasi emassiz",
+    "title_required": "Sarlavha talab qilinadi",
+    "price_required": "Narx talab qilinadi",
+    "game_required": "O'yin talab qilinadi",
+    "invalid_price": "Narx noldan katta bo'lishi kerak",
+    "image_added": "Rasm qo'shildi",
+    "image_removed": "Rasm o'chirildi",
+    "max_images": "Rasmlarning maksimal soniga yetildi"
+  },
+  "game": {
+    "not_found": "O'yin topilmadi",
+    "created": "O'yin yaratildi",
+    "updated": "O'yin yangilandi"
+  },
+  "message": {
+    "sent": "Xabar yuborildi",
+    "deleted": "Xabar o'chirildi",
+    "not_found": "Xabar topilmadi",
+    "not_sender": "Siz bu xabarning yuboruvchisi emassiz",
+    "conversation_not_found": "Suhbat topilmadi",
+    "cannot_message_self": "O'zingizga xabar yuborib bo'lmaydi",
+    "marked_read": "Xabarlar o'qilgan deb belgilandi"
+  },
+  "subscription": {
+    "active": "Obuna faol",
+    "expired": "Obuna muddati tugagan",
+    "cancelled": "Obuna bekor qilindi",
+    "already_active": "Sizda allaqachon faol obuna bor",
+    "payment_initiated": "To'lov boshlandi",
+    "required": "Faol obuna talab qilinadi"
+  },
+  "payment": {
+    "success": "To'lov muvaffaqiyatli amalga oshirildi",
+    "failed": "To'lov xatosi",
+    "invalid_method": "Noto'g'ri to'lov usuli",
+    "invalid_amount": "Noto'g'ri summa"
+  },
+  "kyc": {
+    "document_uploaded": "KYC hujjati yuklandi",
+    "verified": "KYC tekshiruvi muvaffaqiyatli o'tdi",
+    "rejected": "KYC tekshiruvi rad etildi",
+    "pending": "KYC tekshiruvi ko'rib chiqilmoqda",
+    "already_verified": "Hisob allaqachon tasdiqlangan",
+    "not_submitted": "KYC hujjatlari topshirilmagan",
+    "required": "KYC tekshiruvi talab qilinadi",
+    "invalid_document_type": "Hujjat turi yaroqsiz"
+  },
+  "report": {
+    "created": "Shikoyat yuborildi",
+    "not_found": "Shikoyat topilmadi",
+    "duplicate": "Siz buni allaqachon shikoyat qilgansiz",
+    "resolved": "Shikoyat ko'rib chiqildi",
+    "dismissed": "Shikoyat rad etildi"
+  },
+  "admin": {
+    "login_success": "Administrator tizimga kirdi",
+    "created": "Administrator hisobi yaratildi",
+    "updated": "Administrator hisobi yangilandi",
+    "not_found": "Administrator topilmadi",
+    "permission_denied": "Ruxsat berilmagan",
+    "superadmin_required": "Super administrator huquqi talab qilinadi"
+  },
+  "common": {
+    "success": "Muvaffaqiyatli",
+    "error": "Xatolik yuz berdi",
+    "not_found": "Resurs topilmadi",
+    "bad_request": "Noto'g'ri so'rov",
+    "unauthorized": "Avtorizatsiya talab qilinadi",
+    "forbidden": "Kirish taqiqlangan",
+    "internal_error": "Ichki server xatosi",
+    "rate_limited": "Juda ko'p so'rov, keyinroq urinib ko'ring",
+    "validation_error": "Tekshirish xatosi",
+    "invalid_id": "ID formati noto'g'ri",
+    "invalid_pagination": "Sahifalash parametrlari noto'g'ri"
+  }
+}

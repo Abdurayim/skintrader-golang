@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: skintrader-postgres
+    environment:
+      POSTGRES_DB: skintrader
+      POSTGRES_USER: skintrader
+      POSTGRES_PASSWORD: skintrader_secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skintrader"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    container_name: skintrader-dragonfly
+    ports:
+      - "6379:6379"
+    volumes:
+      - dragonfly_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  face-service:
+    build:
+      context: ./face-service
+      dockerfile: Dockerfile
+    container_name: skintrader-face-service
+    ports:
+      - "50051:50051"
+    volumes:
+      - ./uploads/kyc:/uploads/kyc:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import grpc; ch = grpc.insecure_channel('localhost:50051'); grpc.channel_ready_future(ch).result(timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: skintrader-api
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      NODE_ENV: "production"
+      DATABASE_URL: "postgres://skintrader:skintrader_secret@postgres:5432/skintrader?sslmode=disable"
+      REDIS_HOST: "dragonfly"
+      REDIS_PORT: "6379"
+      FACE_SERVICE_ADDRESS: "face-service:50051"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      dragonfly:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads
+
+volumes:
+  postgres_data:
+  dragonfly_data:

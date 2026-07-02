@@ -1,0 +1,104 @@
+{
+  "auth": {
+    "login_success": "Login successful",
+    "register_success": "Registration successful",
+    "logout_success": "Logged out successfully",
+    "invalid_credentials": "Invalid email or password",
+    "token_expired": "Token has expired",
+    "token_invalid": "Invalid token",
+    "email_taken": "Email is already registered",
+    "password_too_short": "Password must be at least 8 characters",
+    "invalid_email": "Invalid email format",
+    "google_auth_failed": "Google authentication failed",
+    "apple_auth_failed": "Apple authentication failed"
+  },
+  "user": {
+    "not_found": "User not found",
+    "profile_updated": "Profile updated successfully",
+    "avatar_updated": "Avatar updated successfully",
+    "location_updated": "Location updated successfully",
+    "account_deleted": "Account deleted successfully",
+    "already_banned": "User is already banned",
+    "already_suspended": "User is already suspended"
+  },
+  "post": {
+    "not_found": "Post not found",
+    "created": "Post created successfully",
+    "updated": "Post updated successfully",
+    "deleted": "Post deleted successfully",
+    "not_owner": "You are not the owner of this post",
+    "title_required": "Title is required",
+    "price_required": "Price is required",
+    "game_required": "Game is required",
+    "invalid_price": "Price must be greater than zero",
+    "image_added": "Image added successfully",
+    "image_removed": "Image removed successfully",
+    "max_images": "Maximum number of images reached"
+  },
+  "game": {
+    "not_found": "Game not found",
+    "created": "Game created successfully",
+    "updated": "Game updated successfully"
+  },
+  "message": {
+    "sent": "Message sent",
+    "deleted": "Message deleted",
+    "not_found": "Message not found",
+    "not_sender": "You are not the sender of this message",
+    "conversation_not_found": "Conversation not found",
+    "cannot_message_self": "Cannot send a message to yourself",
+    "marked_read": "Messages marked as read"
+  },
+  "subscription": {
+    "active": "Subscription is active",
+    "expired": "Subscription has expired",
+    "cancelled": "Subscription cancelled successfully",
+    "already_active": "You already have an active subscription",
+    "payment_initiated": "Payment initiated",
+    "required": "Active subscription required"
+  },
+  "payment": {
+    "success": "Payment completed successfully",
+    "failed": "Payment failed",
+    "invalid_method": "Invalid payment method",
+    "invalid_amount": "Invalid payment amount"
+  },
+  "kyc": {
+    "document_uploaded": "KYC document uploaded successfully",
+    "verified": "KYC verification successful",
+    "rejected": "KYC verification rejected",
+    "pending": "KYC verification is pending review",
+    "already_verified": "Account is already verified",
+    "not_submitted": "No KYC documents submitted",
+    "required": "KYC verification required",
+    "invalid_document_type": "Invalid document type"
+  },
+  "report": {
+    "created": "Report submitted successfully",
+    "not_found": "Report not found",
+    "duplicate": "You have already reported this",
+    "resolved": "Report resolved",
+    "dismissed": "Report dismissed"
+  },
+  "admin": {
+    "login_success": "Admin login successful",
+    "created": "Admin account created",
+    "updated": "Admin account updated",
+    "not_found": "Admin not found",
+    "permission_denied": "Permission denied",
+    "superadmin_required": "Super admin access required"
+  },
+  "common": {
+    "success": "Success",
+    "error": "An error occurred",
+    "not_found": "Resource not found",
+    "bad_request": "Invalid request",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Access denied",
+    "internal_error": "Internal server error",
+    "rate_limited": "Too many requests, please try again later",
+    "validation_error": "Validation error",
+    "invalid_id": "Invalid ID format",
+    "invalid_pagination": "Invalid pagination parameters"
+  }
+}

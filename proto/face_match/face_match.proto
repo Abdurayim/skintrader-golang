@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package facematch;
+
+option go_package = "skintrader-go/proto/face_match";
+
+service FaceMatchService {
+  rpc CompareFaces(CompareFacesRequest) returns (CompareFacesResponse);
+  rpc DetectFace(DetectFaceRequest) returns (DetectFaceResponse);
+}
+
+message CompareFacesRequest {
+  bytes id_image = 1;
+  bytes selfie_image = 2;
+}
+
+message CompareFacesResponse {
+  bool match = 1;
+  double confidence = 2;
+  string error = 3;
+}
+
+message DetectFaceRequest {
+  bytes image = 1;
+}
+
+message DetectFaceResponse {
+  bool face_detected = 1;
+  int32 face_count = 2;
+  string error = 3;
+}
