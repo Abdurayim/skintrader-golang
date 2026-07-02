@@ -20,3 +20,6 @@ vendor/
 # Editor
 .idea/
 .vscode/
+
+# Example env template (kept local only)
+.env.example
