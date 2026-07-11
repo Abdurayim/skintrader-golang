@@ -35,7 +35,7 @@ func Setup(r *gin.Engine, cfg *config.Config, logger zerolog.Logger, h *Handlers
 	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.CORS(cfg.CORS.Origins))
 	r.Use(middleware.Language())
-	r.Use(middleware.RequestSizeLimit(10 * 1024 * 1024)) // 10MB
+	r.Use(middleware.RequestSizeLimit(15 * 1024 * 1024)) // 15MB (10MB file cap + multipart overhead headroom)
 
 	// Health check
 	r.GET("/health", func(c *gin.Context) {

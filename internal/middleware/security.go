@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,44 +24,17 @@ func SecurityHeaders() gin.HandlerFunc {
 func RequestSizeLimit(maxBytes int64) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.Request.ContentLength > maxBytes {
-			c.AbortWithStatusJSON(413, gin.H{
+			c.AbortWithStatusJSON(http.StatusRequestEntityTooLarge, gin.H{
 				"success": false,
 				"message": "Request body too large",
 				"code":    "PAYLOAD_TOO_LARGE",
 			})
 			return
 		}
-		c.Request.Body = &limitedReader{c.Request.Body, maxBytes}
+		// http.MaxBytesReader enforces the limit while passing io.EOF through
+		// correctly, so multipart parsing of within-limit bodies works. It also
+		// covers requests with no Content-Length (chunked transfer encoding).
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxBytes)
 		c.Next()
 	}
-}
-
-type limitedReader struct {
-	reader    interface{ Read([]byte) (int, error) }
-	remaining int64
-}
-
-func (lr *limitedReader) Read(p []byte) (int, error) {
-	if lr.remaining <= 0 {
-		return 0, &payloadTooLargeError{}
-	}
-	if int64(len(p)) > lr.remaining {
-		p = p[:lr.remaining]
-	}
-	n, err := lr.reader.Read(p)
-	lr.remaining -= int64(n)
-	return n, err
-}
-
-func (lr *limitedReader) Close() error {
-	if closer, ok := lr.reader.(interface{ Close() error }); ok {
-		return closer.Close()
-	}
-	return nil
-}
-
-type payloadTooLargeError struct{}
-
-func (e *payloadTooLargeError) Error() string {
-	return "request body too large"
 }
