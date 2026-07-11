@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -247,6 +248,16 @@ func (h *AuthHandler) UploadKYCDocument(c *gin.Context) {
 	// Parse multipart form
 	file, header, err := c.Request.FormFile("file")
 	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			c.JSON(http.StatusRequestEntityTooLarge, ErrorResponse{
+				Success: false,
+				Message: "File is too large. Maximum request size is 15MB",
+				Code:    "PAYLOAD_TOO_LARGE",
+			})
+			return
+		}
+		h.logger.Warn().Err(err).Msg("kyc upload: failed to parse multipart file")
 		BadRequest(c, "File is required")
 		return
 	}
