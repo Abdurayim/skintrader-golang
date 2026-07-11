@@ -245,8 +245,12 @@ func (h *AuthHandler) UploadKYCDocument(c *gin.Context) {
 		return
 	}
 
-	// Parse multipart form
+	// Parse multipart form. The deployed frontend sends the file under
+	// "document"; newer builds use "file" — accept both.
 	file, header, err := c.Request.FormFile("file")
+	if err != nil && errors.Is(err, http.ErrMissingFile) {
+		file, header, err = c.Request.FormFile("document")
+	}
 	if err != nil {
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
