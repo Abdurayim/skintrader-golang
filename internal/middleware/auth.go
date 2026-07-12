@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 
@@ -198,6 +199,7 @@ func (m *AuthMiddleware) AuthenticateAdmin() gin.HandlerFunc {
 
 		admin, err := m.adminRepo.FindByID(context.Background(), claims.AdminID)
 		if err != nil || admin == nil {
+			log.Printf("admin auth: token adminId=%s rejected: %v", claims.AdminID, err)
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"success": false, "message": "Admin not found", "code": "UNAUTHORIZED",
 			})

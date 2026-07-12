@@ -123,6 +123,12 @@ func (h *AdminHandler) logAdminAction(c *gin.Context, admin *domain.Admin, actio
 		}
 	}
 
+	// The admin_logs CHECK constraint only allows capitalized target types
+	// ('User', 'Post', 'Admin', ...) — normalize lowercase call sites.
+	if targetType != "" {
+		targetType = strings.ToUpper(targetType[:1]) + targetType[1:]
+	}
+
 	ip := c.ClientIP()
 	ua := c.GetHeader("User-Agent")
 
@@ -247,6 +253,7 @@ func (h *AdminHandler) RefreshToken(c *gin.Context) {
 	// Verify admin still exists and is active
 	admin, err := h.adminRepo.FindByID(c.Request.Context(), claims.AdminID)
 	if err != nil || admin == nil {
+		h.logger.Warn().Err(err).Str("adminID", claims.AdminID.String()).Msg("refresh: admin lookup failed")
 		Unauthorized(c, "Admin not found")
 		return
 	}
