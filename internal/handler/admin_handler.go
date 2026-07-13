@@ -168,6 +168,10 @@ func (h *AdminHandler) Login(c *gin.Context) {
 
 	admin, err := h.adminRepo.FindByEmail(c.Request.Context(), req.Email)
 	if err != nil || admin == nil {
+		h.logger.Warn().Err(err).
+			Str("email", req.Email).
+			Int("emailLen", len(req.Email)).
+			Msg("admin login: email lookup failed")
 		Unauthorized(c, "Invalid email or password")
 		return
 	}
@@ -179,6 +183,17 @@ func (h *AdminHandler) Login(c *gin.Context) {
 
 	// Verify password
 	if !hash.CheckPassword(req.Password, admin.PasswordHash) {
+		hashPrefix := admin.PasswordHash
+		if len(hashPrefix) > 7 {
+			hashPrefix = hashPrefix[:7]
+		}
+		h.logger.Warn().
+			Str("email", req.Email).
+			Str("adminID", admin.ID.String()).
+			Int("passwordLen", len(req.Password)).
+			Int("hashLen", len(admin.PasswordHash)).
+			Str("hashPrefix", hashPrefix).
+			Msg("admin login: password mismatch")
 		Unauthorized(c, "Invalid email or password")
 		return
 	}
