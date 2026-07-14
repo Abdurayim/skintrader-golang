@@ -28,8 +28,14 @@ type PostHandler struct {
 	userRepo       domain.UserRepository
 	gameRepo       domain.GameRepository
 	imageService   *service.ImageService
+	notifRepo      domain.NotificationRepository
 	authMiddleware *middleware.AuthMiddleware
 	logger         zerolog.Logger
+}
+
+// SetNotificationRepo wires the notification repository.
+func (h *PostHandler) SetNotificationRepo(r domain.NotificationRepository) {
+	h.notifRepo = r
 }
 
 func NewPostHandler(
@@ -352,6 +358,12 @@ func (h *PostHandler) CreatePost(c *gin.Context) {
 
 	// Enrich with seller and game info
 	h.enrichPost(c.Request.Context(), post)
+
+	notify(c.Request.Context(), h.notifRepo, h.logger, userID, domain.NotificationPostPublished, gin.H{
+		"title":  post.Title,
+		"postId": post.ID,
+		"cost":   domain.PostCostUZS,
+	})
 
 	Created(c, gin.H{"post": post}, "Post created successfully")
 }

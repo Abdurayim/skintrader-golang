@@ -212,3 +212,38 @@ func (r *BalanceTopupRepo) Reject(ctx context.Context, id uuid.UUID, adminID uui
 	}
 	return topup, nil
 }
+
+// GetRevenueStats aggregates revenue figures from verified top-ups.
+func (r *BalanceTopupRepo) GetRevenueStats(ctx context.Context) (*domain.TopupRevenueStats, error) {
+	stats := &domain.TopupRevenueStats{}
+
+	err := r.pool.QueryRow(ctx, `
+		SELECT
+			COALESCE(SUM(amount) FILTER (WHERE status = 'approved'), 0),
+			COUNT(*) FILTER (WHERE status = 'approved'),
+			COALESCE(SUM(amount) FILTER (WHERE status = 'approved' AND reviewed_at >= CURRENT_DATE), 0),
+			COALESCE(SUM(amount) FILTER (WHERE status = 'approved' AND reviewed_at >= date_trunc('month', CURRENT_DATE)), 0),
+			COALESCE(SUM(amount) FILTER (WHERE status = 'pending'), 0),
+			COUNT(*) FILTER (WHERE status = 'pending')
+		FROM balance_topups`,
+	).Scan(
+		&stats.TotalApproved, &stats.ApprovedCount,
+		&stats.TodayApproved, &stats.MonthApproved,
+		&stats.PendingAmount, &stats.PendingCount,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("aggregating top-up revenue: %w", err)
+	}
+
+	if err := r.pool.QueryRow(ctx,
+		`SELECT COALESCE(SUM(balance), 0) FROM users`,
+	).Scan(&stats.OutstandingBalance); err != nil {
+		return nil, fmt.Errorf("summing user balances: %w", err)
+	}
+
+	stats.ConsumedRevenue = stats.TotalApproved - stats.OutstandingBalance
+	if stats.ConsumedRevenue < 0 {
+		stats.ConsumedRevenue = 0
+	}
+	return stats, nil
+}

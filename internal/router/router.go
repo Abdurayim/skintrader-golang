@@ -19,6 +19,7 @@ type Handlers struct {
 	Message      *handler.MessageHandler
 	Subscription *handler.SubscriptionHandler
 	Balance      *handler.BalanceHandler
+	Notification *handler.NotificationHandler
 	Payment      *handler.PaymentHandler
 	Report       *handler.ReportHandler
 	Admin        *handler.AdminHandler
@@ -200,6 +201,13 @@ func setupBalanceRoutes(rg *gin.RouterGroup, h *Handlers, deps *Dependencies) {
 		balance.POST("/topup", deps.RateLimiter.Limit(middleware.UploadLimit), h.Balance.CreateTopup)
 		balance.GET("/topups", h.Balance.GetMyTopups)
 	}
+
+	notifications := rg.Group("/notifications", deps.AuthMiddleware.AuthenticateUser())
+	{
+		notifications.GET("", h.Notification.GetNotifications)
+		notifications.PATCH("/read-all", h.Notification.MarkAllRead)
+		notifications.PATCH("/:id/read", h.Notification.MarkRead)
+	}
 }
 
 func setupPaymentRoutes(rg *gin.RouterGroup, h *Handlers, deps *Dependencies) {
@@ -287,6 +295,9 @@ func setupAdminRoutes(rg *gin.RouterGroup, h *Handlers, deps *Dependencies) {
 			authenticated.POST("/topups/:id/approve", h.Admin.ApproveTopup)
 			authenticated.POST("/topups/:id/reject", h.Admin.RejectTopup)
 			authenticated.GET("/topups/cheque/:filename", h.Admin.ServeChequeImage)
+
+			// Revenue
+			authenticated.GET("/revenue", h.Admin.GetRevenue)
 
 			// Reports
 			authenticated.GET("/reports", h.Admin.GetReports)

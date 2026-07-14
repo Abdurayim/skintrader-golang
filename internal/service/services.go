@@ -25,6 +25,7 @@ type Services struct {
 	KYC          *KYCService
 	AdminLog     domain.AdminLogRepository
 	BalanceTopup domain.BalanceTopupRepository
+	Notification domain.NotificationRepository
 	Cache        *CacheService
 	Image        *ImageService
 }
@@ -80,6 +81,7 @@ func NewServices(cfg *config.Config, repos *postgres.Repositories, cacheRepo *ca
 		KYC:          kycService,
 		AdminLog:     repos.AdminLog,
 		BalanceTopup: repos.BalanceTopup,
+		Notification: repos.Notification,
 		Cache:        cacheService,
 		Image:        imageService,
 	}

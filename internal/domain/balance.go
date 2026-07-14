@@ -63,4 +63,6 @@ type BalanceTopupRepository interface {
 	Approve(ctx context.Context, id uuid.UUID, adminID uuid.UUID, note string) (*BalanceTopup, error)
 	// Reject marks a pending top-up rejected without touching the balance.
 	Reject(ctx context.Context, id uuid.UUID, adminID uuid.UUID, note string) (*BalanceTopup, error)
+	// GetRevenueStats aggregates revenue figures from verified top-ups.
+	GetRevenueStats(ctx context.Context) (*TopupRevenueStats, error)
 }

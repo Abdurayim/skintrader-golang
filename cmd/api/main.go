@@ -190,15 +190,20 @@ func setupHandlers(cfg *config.Config, services *service.Services, jwtManager *j
 	)
 	adminHandler.SetJWTManager(jwtManager)
 	adminHandler.SetTopupRepo(services.BalanceTopup)
+	adminHandler.SetNotificationRepo(services.Notification)
+
+	postHandler := handler.NewPostHandler(services.Post, services.User, services.Game, services.Image, authMiddleware, logger)
+	postHandler.SetNotificationRepo(services.Notification)
 
 	return &router.Handlers{
 		Auth:         handler.NewAuthHandler(services.Auth, services.KYC, authMiddleware, logger),
 		User:         handler.NewUserHandler(services.User, services.Post, services.Image, authMiddleware, logger),
-		Post:         handler.NewPostHandler(services.Post, services.User, services.Game, services.Image, authMiddleware, logger),
+		Post:         postHandler,
 		Game:         handler.NewGameHandler(services.Game, logger),
 		Message:      handler.NewMessageHandler(services.Message, services.Conversation, services.User, authMiddleware, logger),
 		Subscription: handler.NewSubscriptionHandler(services.Subscription, services.Payment, authMiddleware, logger),
 		Balance:      handler.NewBalanceHandler(services.User, services.BalanceTopup, cfg.Payment.TopupCardNumber, logger),
+		Notification: handler.NewNotificationHandler(services.Notification, logger),
 		Payment:      handler.NewPaymentHandler(services.Payment, authMiddleware, logger),
 		Report:       handler.NewReportHandler(services.Report, authMiddleware, logger),
 		Admin:        adminHandler,

@@ -31,6 +31,7 @@ type AdminHandler struct {
 	kycService       *service.KYCService
 	adminLogRepo     domain.AdminLogRepository
 	topupRepo        domain.BalanceTopupRepository
+	notifRepo        domain.NotificationRepository
 	authMiddleware   *middleware.AuthMiddleware
 	jwtManager       *jwtpkg.Manager
 	logger           zerolog.Logger
@@ -81,6 +82,11 @@ func (h *AdminHandler) SetJWTManager(m *jwtpkg.Manager) {
 // SetTopupRepo wires the balance top-up repository for admin review endpoints.
 func (h *AdminHandler) SetTopupRepo(r domain.BalanceTopupRepository) {
 	h.topupRepo = r
+}
+
+// SetNotificationRepo wires the notification repository for user notifications.
+func (h *AdminHandler) SetNotificationRepo(r domain.NotificationRepository) {
+	h.notifRepo = r
 }
 
 // ---------------------------------------------------------------------------
@@ -616,6 +622,10 @@ func (h *AdminHandler) DeletePost(c *gin.Context) {
 		"userId":    post.UserID.String(),
 	})
 
+	notify(c.Request.Context(), h.notifRepo, h.logger, post.UserID, domain.NotificationPostRemoved, gin.H{
+		"title": post.Title,
+	})
+
 	Success(c, nil, "Post deleted successfully")
 }
 
@@ -698,6 +708,8 @@ func (h *AdminHandler) ApproveKYC(c *gin.Context) {
 
 	h.logAdminAction(c, admin, domain.AdminActionKYCApproved, "user", &userID, nil)
 
+	notify(c.Request.Context(), h.notifRepo, h.logger, userID, domain.NotificationKYCApproved, nil)
+
 	Success(c, nil, "KYC approved successfully")
 }
 
@@ -741,6 +753,10 @@ func (h *AdminHandler) RejectKYC(c *gin.Context) {
 
 	h.logAdminAction(c, admin, domain.AdminActionKYCRejected, "user", &userID, gin.H{
 		"reason": req.Reason,
+	})
+
+	notify(c.Request.Context(), h.notifRepo, h.logger, userID, domain.NotificationKYCRejected, gin.H{
+		"reason": strings.TrimSpace(req.Reason),
 	})
 
 	Success(c, nil, "KYC rejected successfully")
@@ -2039,6 +2055,10 @@ func (h *AdminHandler) ApproveTopup(c *gin.Context) {
 		"amount":  topup.Amount,
 	})
 
+	notify(c.Request.Context(), h.notifRepo, h.logger, topup.UserID, domain.NotificationTopupApproved, gin.H{
+		"amount": topup.Amount,
+	})
+
 	Success(c, gin.H{"topup": topup}, "Top-up approved and balance credited")
 }
 
@@ -2085,6 +2105,11 @@ func (h *AdminHandler) RejectTopup(c *gin.Context) {
 		"reason":  note,
 	})
 
+	notify(c.Request.Context(), h.notifRepo, h.logger, topup.UserID, domain.NotificationTopupRejected, gin.H{
+		"amount": topup.Amount,
+		"reason": note,
+	})
+
 	Success(c, gin.H{"topup": topup}, "Top-up rejected")
 }
 
@@ -2111,4 +2136,54 @@ func (h *AdminHandler) ServeChequeImage(c *gin.Context) {
 	}
 
 	c.File(filePath)
+}
+
+// ==========================================================================
+// Revenue
+// ==========================================================================
+
+// GetRevenue returns revenue statistics computed from verified top-ups.
+func (h *AdminHandler) GetRevenue(c *gin.Context) {
+	admin, ok := middleware.GetAdmin(c)
+	if !ok {
+		Unauthorized(c, "Admin authentication required")
+		return
+	}
+
+	if !admin.HasPermission(string(domain.AdminPermissionViewStats)) {
+		Forbidden(c, "Insufficient permissions")
+		return
+	}
+
+	stats, err := h.topupRepo.GetRevenueStats(c.Request.Context())
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to compute revenue stats")
+		Error(c, apperr.Internal("Failed to compute revenue statistics"))
+		return
+	}
+
+	// Recent verified top-ups for the revenue page
+	approvedStatus := domain.TopupStatusApproved
+	recent, _, err := h.topupRepo.ListWithFilters(c.Request.Context(), domain.TopupListFilter{
+		Page: 1, Limit: 10, Status: &approvedStatus,
+	})
+	if err != nil {
+		h.logger.Warn().Err(err).Msg("failed to list recent approved top-ups")
+		recent = []*domain.BalanceTopup{}
+	}
+	for _, t := range recent {
+		if user, uErr := h.userRepo.FindByID(c.Request.Context(), t.UserID); uErr == nil && user != nil {
+			t.User = &domain.TopupUserInfo{
+				ID:          user.ID,
+				DisplayName: user.DisplayName,
+				Email:       user.Email,
+				Balance:     user.Balance,
+			}
+		}
+	}
+
+	Success(c, gin.H{
+		"revenue":      stats,
+		"recentTopups": recent,
+	}, "Revenue statistics retrieved")
 }
