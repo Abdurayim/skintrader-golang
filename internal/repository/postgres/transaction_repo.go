@@ -21,10 +21,11 @@ func NewTransactionRepo(pool *pgxpool.Pool) *TransactionRepo {
 	return &TransactionRepo{pool: pool}
 }
 
+// ip_address is INET in PostgreSQL — cast to text so pgx can scan it into *string.
 const transactionColumns = `id, user_id, subscription_id, external_transaction_id,
 	amount, currency, status, payment_method, payment_response,
 	webhook_received, webhook_received_at,
-	ip_address, user_agent, error_message, error_code,
+	ip_address::text, user_agent, error_message, error_code,
 	refunded_at, refund_reason, refunded_by,
 	created_at, updated_at`
 

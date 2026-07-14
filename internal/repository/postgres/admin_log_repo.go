@@ -22,9 +22,10 @@ func NewAdminLogRepo(pool *pgxpool.Pool) *AdminLogRepo {
 	return &AdminLogRepo{pool: pool}
 }
 
+// ip_address is INET in PostgreSQL — cast to text so pgx can scan it into *string.
 const adminLogColumns = `id, admin_id, action, target_type, target_id,
 	details, previous_state, new_state,
-	ip_address, user_agent, reason, metadata, created_at`
+	ip_address::text, user_agent, reason, metadata, created_at`
 
 // scanAdminLog scans a single row into a domain.AdminLog.
 func scanAdminLog(row pgx.Row) (*domain.AdminLog, error) {
@@ -243,7 +244,7 @@ func (r *AdminLogRepo) ListWithFilters(ctx context.Context, filter domain.AdminL
 	dataBuilder := psql.Select(
 		"id", "admin_id", "action", "target_type", "target_id",
 		"details", "previous_state", "new_state",
-		"ip_address", "user_agent", "reason", "metadata", "created_at",
+		"ip_address::text", "user_agent", "reason", "metadata", "created_at",
 	).From("admin_logs")
 	dataBuilder = r.applyAdminLogFilters(dataBuilder, filter)
 

@@ -21,8 +21,9 @@ func NewAdminRepo(pool *pgxpool.Pool) *AdminRepo {
 	return &AdminRepo{pool: pool}
 }
 
+// last_login_ip is INET in PostgreSQL — cast to text so pgx can scan it into *string.
 const adminColumns = `id, email, password_hash, name, role, permissions, is_active,
-	last_login_at, last_login_ip, password_reset_token, password_reset_expires,
+	last_login_at, last_login_ip::text, password_reset_token, password_reset_expires,
 	created_by, updated_by, created_at, updated_at`
 
 // scanAdmin scans a single row into a domain.Admin.

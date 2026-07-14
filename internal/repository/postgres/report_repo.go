@@ -23,10 +23,11 @@ func NewReportRepo(pool *pgxpool.Pool) *ReportRepo {
 	return &ReportRepo{pool: pool}
 }
 
+// ip_address is INET in PostgreSQL — cast to text so pgx can scan it into *string.
 const reportColumns = `id, reporter_id, report_type, target_id, target_model, category,
 	description, status, priority, reviewed_by, reviewed_at,
 	resolution_action, resolution_notes, resolution_admin_notes, resolved_at,
-	report_hash, ip_address, user_agent, report_count, created_at, updated_at`
+	report_hash, ip_address::text, user_agent, report_count, created_at, updated_at`
 
 // scanReport scans a single row into a domain.Report.
 func scanReport(row pgx.Row) (*domain.Report, error) {
@@ -267,7 +268,7 @@ func (r *ReportRepo) ListWithFilters(ctx context.Context, filter domain.ReportLi
 		"id", "reporter_id", "report_type", "target_id", "target_model", "category",
 		"description", "status", "priority", "reviewed_by", "reviewed_at",
 		"resolution_action", "resolution_notes", "resolution_admin_notes", "resolved_at",
-		"report_hash", "ip_address", "user_agent", "report_count", "created_at", "updated_at",
+		"report_hash", "ip_address::text", "user_agent", "report_count", "created_at", "updated_at",
 	).From("reports")
 	dataBuilder = r.applyReportFilters(dataBuilder, filter)
 
