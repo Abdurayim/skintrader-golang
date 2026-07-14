@@ -260,6 +260,10 @@ const (
 	AdminActionSubscriptionGranted AdminAction = "subscription_granted"
 	AdminActionSubscriptionRevoked AdminAction = "subscription_revoked"
 
+	// Balance top-up actions
+	AdminActionTopupApproved AdminAction = "topup_approved"
+	AdminActionTopupRejected AdminAction = "topup_rejected"
+
 	// Report actions
 	AdminActionReportResolved  AdminAction = "report_resolved"
 	AdminActionReportDismissed AdminAction = "report_dismissed"

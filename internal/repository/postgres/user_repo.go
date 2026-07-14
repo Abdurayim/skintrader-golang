@@ -37,7 +37,7 @@ const userSelectColumns = `
 	u.social_media, u.language, u.status, u.status_reason,
 	u.kyc_status, u.kyc_rejection_reason, u.kyc_verified_at, u.kyc_reviewed_by, u.face_match_score,
 	ST_Y(u.location::geometry) AS latitude, ST_X(u.location::geometry) AS longitude, u.location_updated_at,
-	u.posts_count, u.reports_received, u.reports_made,
+	u.balance, u.posts_count, u.reports_received, u.reports_made,
 	u.subscription_status, u.current_subscription_id, u.subscription_expires_at, u.grace_period_ends_at,
 	u.last_login_at, u.last_active_at, u.created_at, u.updated_at
 `
@@ -54,7 +54,7 @@ func scanUser(row pgx.Row) (*domain.User, error) {
 		&socialMediaBytes, &u.Language, &u.Status, &u.StatusReason,
 		&u.KYCStatus, &u.KYCRejectionReason, &u.KYCVerifiedAt, &u.KYCReviewedBy, &u.FaceMatchScore,
 		&u.Latitude, &u.Longitude, &u.LocationUpdatedAt,
-		&u.PostsCount, &u.ReportsReceived, &u.ReportsMade,
+		&u.Balance, &u.PostsCount, &u.ReportsReceived, &u.ReportsMade,
 		&u.SubscriptionStatus, &u.CurrentSubscriptionID, &u.SubscriptionExpiresAt, &u.GracePeriodEndsAt,
 		&u.LastLoginAt, &u.LastActiveAt, &u.CreatedAt, &u.UpdatedAt,
 	)
@@ -642,4 +642,42 @@ func (r *UserRepo) FindRecent(ctx context.Context, limit int) ([]*domain.User, e
 		users = append(users, u)
 	}
 	return users, rows.Err()
+}
+
+// DeductBalance atomically subtracts amount from the user's balance.
+// Returns domain.ErrInsufficientBalance when the balance is too low.
+func (r *UserRepo) DeductBalance(ctx context.Context, userID uuid.UUID, amount int64) error {
+	if amount <= 0 {
+		return fmt.Errorf("deduct amount must be positive")
+	}
+	cmdTag, err := r.pool.Exec(ctx,
+		`UPDATE users SET balance = balance - $2, updated_at = NOW()
+		 WHERE id = $1 AND balance >= $2`,
+		userID, amount,
+	)
+	if err != nil {
+		return fmt.Errorf("deducting balance: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return domain.ErrInsufficientBalance
+	}
+	return nil
+}
+
+// AddBalance atomically credits amount to the user's balance.
+func (r *UserRepo) AddBalance(ctx context.Context, userID uuid.UUID, amount int64) error {
+	if amount <= 0 {
+		return fmt.Errorf("credit amount must be positive")
+	}
+	cmdTag, err := r.pool.Exec(ctx,
+		`UPDATE users SET balance = balance + $2, updated_at = NOW() WHERE id = $1`,
+		userID, amount,
+	)
+	if err != nil {
+		return fmt.Errorf("adding balance: %w", err)
+	}
+	if cmdTag.RowsAffected() == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
 }

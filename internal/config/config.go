@@ -102,6 +102,10 @@ type PaymentConfig struct {
 	Click ClickConfig
 	Xazna XaznaConfig
 	Uzum  UzumConfig
+
+	// TopupCardNumber is the bank card users transfer to for manual
+	// balance top-ups (shown on the Add Balance page).
+	TopupCardNumber string
 }
 
 type PaymeConfig struct {
@@ -212,6 +216,7 @@ func Load() (*Config, error) {
 			GraceDays:    getEnvInt("GRACE_PERIOD_DAYS", 3),
 		},
 		Payment: PaymentConfig{
+			TopupCardNumber: getEnv("TOPUP_CARD_NUMBER", "9860 0401 0609 8862"),
 			Payme: PaymeConfig{
 				MerchantID:  getEnv("PAYME_MERCHANT_ID", ""),
 				SecretKey:   getEnv("PAYME_SECRET_KEY", ""),

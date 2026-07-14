@@ -18,6 +18,7 @@ type Repositories struct {
 	Report       domain.ReportRepository
 	Admin        domain.AdminRepository
 	AdminLog     domain.AdminLogRepository
+	BalanceTopup domain.BalanceTopupRepository
 	pool         *pgxpool.Pool
 }
 
@@ -34,6 +35,7 @@ func NewRepositories(pool *pgxpool.Pool) *Repositories {
 		Report:       NewReportRepo(pool),
 		Admin:        NewAdminRepo(pool),
 		AdminLog:     NewAdminLogRepo(pool),
+		BalanceTopup: NewBalanceTopupRepo(pool),
 		pool:         pool,
 	}
 }

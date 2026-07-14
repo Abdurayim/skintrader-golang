@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS balance_topups;
+ALTER TABLE users DROP COLUMN IF EXISTS balance;

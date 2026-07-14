@@ -38,6 +38,9 @@ type User struct {
 	Longitude         *float64   `json:"longitude,omitempty" db:"longitude"`
 	LocationUpdatedAt *time.Time `json:"locationUpdatedAt,omitempty" db:"location_updated_at"`
 
+	// Balance in Uzbek so'm (UZS), spent on publishing posts
+	Balance int64 `json:"balance" db:"balance"`
+
 	// Stats
 	PostsCount      int `json:"postsCount" db:"posts_count"`
 	ReportsReceived int `json:"reportsReceived" db:"reports_received"`
@@ -106,4 +109,18 @@ type UserRepository interface {
 	GetKYCDocuments(ctx context.Context, userID uuid.UUID) ([]*KYCDocument, error)
 	GetKYCDocumentByType(ctx context.Context, userID uuid.UUID, docType KYCDocumentType) (*KYCDocument, error)
 	UpdateFaceMatchScore(ctx context.Context, userID uuid.UUID, score float32) error
+
+	// Balance methods (amounts in UZS)
+	// DeductBalance atomically subtracts amount if the balance is sufficient;
+	// returns ErrInsufficientBalance otherwise.
+	DeductBalance(ctx context.Context, userID uuid.UUID, amount int64) error
+	// AddBalance atomically credits amount to the user's balance.
+	AddBalance(ctx context.Context, userID uuid.UUID, amount int64) error
 }
+
+// ErrInsufficientBalance is returned when a balance deduction would go negative.
+var ErrInsufficientBalance = errInsufficientBalance{}
+
+type errInsufficientBalance struct{}
+
+func (errInsufficientBalance) Error() string { return "insufficient balance" }

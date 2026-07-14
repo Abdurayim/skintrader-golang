@@ -30,6 +30,7 @@ type AdminHandler struct {
 	reportRepo       domain.ReportRepository
 	kycService       *service.KYCService
 	adminLogRepo     domain.AdminLogRepository
+	topupRepo        domain.BalanceTopupRepository
 	authMiddleware   *middleware.AuthMiddleware
 	jwtManager       *jwtpkg.Manager
 	logger           zerolog.Logger
@@ -75,6 +76,11 @@ func NewAdminHandler(
 // This is called externally since the handler receives services as interface{}.
 func (h *AdminHandler) SetJWTManager(m *jwtpkg.Manager) {
 	h.jwtManager = m
+}
+
+// SetTopupRepo wires the balance top-up repository for admin review endpoints.
+func (h *AdminHandler) SetTopupRepo(r domain.BalanceTopupRepository) {
+	h.topupRepo = r
 }
 
 // ---------------------------------------------------------------------------
@@ -1943,4 +1949,166 @@ func (h *AdminHandler) GetLogs(c *gin.Context) {
 	Paginated(c, gin.H{
 		"logs": rows,
 	}, paginationMeta(page, limit, total), "Admin logs retrieved successfully")
+}
+
+// ==========================================================================
+// Balance Top-up Review
+// ==========================================================================
+
+// GetTopups returns balance top-up requests for admin review.
+func (h *AdminHandler) GetTopups(c *gin.Context) {
+	admin, ok := middleware.GetAdmin(c)
+	if !ok {
+		Unauthorized(c, "Admin authentication required")
+		return
+	}
+
+	if !admin.HasPermission(string(domain.AdminPermissionManageSubscriptions)) {
+		Forbidden(c, "Insufficient permissions")
+		return
+	}
+
+	page, limit, _ := parsePagination(c)
+
+	filter := domain.TopupListFilter{Page: page, Limit: limit}
+	if status := c.Query("status"); status != "" {
+		s := domain.TopupStatus(status)
+		switch s {
+		case domain.TopupStatusPending, domain.TopupStatusApproved, domain.TopupStatusRejected:
+			filter.Status = &s
+		}
+	}
+
+	topups, total, err := h.topupRepo.ListWithFilters(c.Request.Context(), filter)
+	if err != nil {
+		h.logger.Error().Err(err).Msg("failed to list top-ups")
+		Error(c, apperr.Internal("Failed to retrieve top-up requests"))
+		return
+	}
+
+	// Attach requester info for the review UI
+	for _, t := range topups {
+		if user, uErr := h.userRepo.FindByID(c.Request.Context(), t.UserID); uErr == nil && user != nil {
+			t.User = &domain.TopupUserInfo{
+				ID:          user.ID,
+				DisplayName: user.DisplayName,
+				Email:       user.Email,
+				Balance:     user.Balance,
+			}
+		}
+	}
+
+	Paginated(c, gin.H{
+		"topups": topups,
+	}, paginationMeta(page, limit, total), "Top-up requests retrieved successfully")
+}
+
+// ApproveTopup approves a pending top-up and credits the user's balance.
+func (h *AdminHandler) ApproveTopup(c *gin.Context) {
+	admin, ok := middleware.GetAdmin(c)
+	if !ok {
+		Unauthorized(c, "Admin authentication required")
+		return
+	}
+
+	if !admin.HasPermission(string(domain.AdminPermissionManageSubscriptions)) {
+		Forbidden(c, "Insufficient permissions")
+		return
+	}
+
+	topupID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		BadRequest(c, "Invalid top-up ID format")
+		return
+	}
+
+	var req struct {
+		Note string `json:"note"`
+	}
+	_ = c.ShouldBindJSON(&req)
+
+	topup, err := h.topupRepo.Approve(c.Request.Context(), topupID, admin.ID, strings.TrimSpace(req.Note))
+	if err != nil {
+		h.logger.Error().Err(err).Str("topupID", topupID.String()).Msg("failed to approve top-up")
+		BadRequest(c, "Failed to approve: top-up not found or already reviewed")
+		return
+	}
+
+	h.logAdminAction(c, admin, domain.AdminActionTopupApproved, "user", &topup.UserID, gin.H{
+		"topupId": topup.ID,
+		"amount":  topup.Amount,
+	})
+
+	Success(c, gin.H{"topup": topup}, "Top-up approved and balance credited")
+}
+
+// RejectTopup rejects a pending top-up request.
+func (h *AdminHandler) RejectTopup(c *gin.Context) {
+	admin, ok := middleware.GetAdmin(c)
+	if !ok {
+		Unauthorized(c, "Admin authentication required")
+		return
+	}
+
+	if !admin.HasPermission(string(domain.AdminPermissionManageSubscriptions)) {
+		Forbidden(c, "Insufficient permissions")
+		return
+	}
+
+	topupID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		BadRequest(c, "Invalid top-up ID format")
+		return
+	}
+
+	var req struct {
+		Reason string `json:"reason"`
+		Note   string `json:"note"`
+	}
+	_ = c.ShouldBindJSON(&req)
+
+	note := strings.TrimSpace(req.Reason)
+	if note == "" {
+		note = strings.TrimSpace(req.Note)
+	}
+
+	topup, err := h.topupRepo.Reject(c.Request.Context(), topupID, admin.ID, note)
+	if err != nil {
+		h.logger.Error().Err(err).Str("topupID", topupID.String()).Msg("failed to reject top-up")
+		BadRequest(c, "Failed to reject: top-up not found or already reviewed")
+		return
+	}
+
+	h.logAdminAction(c, admin, domain.AdminActionTopupRejected, "user", &topup.UserID, gin.H{
+		"topupId": topup.ID,
+		"amount":  topup.Amount,
+		"reason":  note,
+	})
+
+	Success(c, gin.H{"topup": topup}, "Top-up rejected")
+}
+
+// ServeChequeImage serves a top-up cheque image to authenticated admins.
+func (h *AdminHandler) ServeChequeImage(c *gin.Context) {
+	admin, ok := middleware.GetAdmin(c)
+	if !ok {
+		Unauthorized(c, "Admin authentication required")
+		return
+	}
+
+	if !admin.HasPermission(string(domain.AdminPermissionManageSubscriptions)) {
+		Forbidden(c, "Insufficient permissions")
+		return
+	}
+
+	// Sanitize filename to prevent directory traversal
+	filename := filepath.Base(c.Param("filename"))
+	filePath := filepath.Join("uploads", "cheques", filename)
+
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		NotFound(c, "Cheque image not found")
+		return
+	}
+
+	c.File(filePath)
 }

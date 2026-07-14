@@ -71,7 +71,7 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(jwtManager, services.User, services.Admin)
 
 	// Handlers
-	handlers := setupHandlers(services, jwtManager, authMiddleware, logger)
+	handlers := setupHandlers(cfg, services, jwtManager, authMiddleware, logger)
 
 	// Router
 	r := gin.New()
@@ -175,7 +175,7 @@ func setupServices(cfg *config.Config, repos *postgres.Repositories, cacheRepo *
 	return service.NewServices(cfg, repos, cacheRepo, jwtManager, logger)
 }
 
-func setupHandlers(services *service.Services, jwtManager *jwtpkg.Manager, authMiddleware *middleware.AuthMiddleware, logger zerolog.Logger) *router.Handlers {
+func setupHandlers(cfg *config.Config, services *service.Services, jwtManager *jwtpkg.Manager, authMiddleware *middleware.AuthMiddleware, logger zerolog.Logger) *router.Handlers {
 	adminHandler := handler.NewAdminHandler(
 		services.Admin,
 		services.User,
@@ -189,6 +189,7 @@ func setupHandlers(services *service.Services, jwtManager *jwtpkg.Manager, authM
 		logger,
 	)
 	adminHandler.SetJWTManager(jwtManager)
+	adminHandler.SetTopupRepo(services.BalanceTopup)
 
 	return &router.Handlers{
 		Auth:         handler.NewAuthHandler(services.Auth, services.KYC, authMiddleware, logger),
@@ -197,6 +198,7 @@ func setupHandlers(services *service.Services, jwtManager *jwtpkg.Manager, authM
 		Game:         handler.NewGameHandler(services.Game, logger),
 		Message:      handler.NewMessageHandler(services.Message, services.Conversation, services.User, authMiddleware, logger),
 		Subscription: handler.NewSubscriptionHandler(services.Subscription, services.Payment, authMiddleware, logger),
+		Balance:      handler.NewBalanceHandler(services.User, services.BalanceTopup, cfg.Payment.TopupCardNumber, logger),
 		Payment:      handler.NewPaymentHandler(services.Payment, authMiddleware, logger),
 		Report:       handler.NewReportHandler(services.Report, authMiddleware, logger),
 		Admin:        adminHandler,

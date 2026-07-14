@@ -164,3 +164,11 @@ func (m *MockUserRepository) CountByKYCStatus(ctx context.Context, status domain
 func (m *MockUserRepository) FindRecent(ctx context.Context, limit int) ([]*domain.User, error) {
 	return nil, nil
 }
+
+func (m *MockUserRepository) DeductBalance(ctx context.Context, userID uuid.UUID, amount int64) error {
+	return nil
+}
+
+func (m *MockUserRepository) AddBalance(ctx context.Context, userID uuid.UUID, amount int64) error {
+	return nil
+}

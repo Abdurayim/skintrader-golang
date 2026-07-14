@@ -18,6 +18,7 @@ type Handlers struct {
 	Game         *handler.GameHandler
 	Message      *handler.MessageHandler
 	Subscription *handler.SubscriptionHandler
+	Balance      *handler.BalanceHandler
 	Payment      *handler.PaymentHandler
 	Report       *handler.ReportHandler
 	Admin        *handler.AdminHandler
@@ -54,6 +55,14 @@ func Setup(r *gin.Engine, cfg *config.Config, logger zerolog.Logger, h *Handlers
 		})
 	})
 
+	// Block direct cheque access (admins view cheques via an authenticated endpoint)
+	r.GET("/uploads/cheques/*filepath", func(c *gin.Context) {
+		c.JSON(http.StatusForbidden, gin.H{
+			"success": false,
+			"message": "Direct access to cheque images is not allowed",
+		})
+	})
+
 	// API v1
 	v1 := r.Group("/api/v1")
 	{
@@ -63,6 +72,7 @@ func Setup(r *gin.Engine, cfg *config.Config, logger zerolog.Logger, h *Handlers
 		setupGameRoutes(v1, h, deps)
 		setupMessageRoutes(v1, h, deps)
 		setupSubscriptionRoutes(v1, h, deps)
+		setupBalanceRoutes(v1, h, deps)
 		setupPaymentRoutes(v1, h, deps)
 		setupReportRoutes(v1, h, deps)
 		setupAdminRoutes(v1, h, deps)
@@ -183,6 +193,15 @@ func setupSubscriptionRoutes(rg *gin.RouterGroup, h *Handlers, deps *Dependencie
 	}
 }
 
+func setupBalanceRoutes(rg *gin.RouterGroup, h *Handlers, deps *Dependencies) {
+	balance := rg.Group("/balance", deps.AuthMiddleware.AuthenticateUser())
+	{
+		balance.GET("", h.Balance.GetBalance)
+		balance.POST("/topup", deps.RateLimiter.Limit(middleware.UploadLimit), h.Balance.CreateTopup)
+		balance.GET("/topups", h.Balance.GetMyTopups)
+	}
+}
+
 func setupPaymentRoutes(rg *gin.RouterGroup, h *Handlers, deps *Dependencies) {
 	payments := rg.Group("/payments")
 	{
@@ -262,6 +281,12 @@ func setupAdminRoutes(rg *gin.RouterGroup, h *Handlers, deps *Dependencies) {
 			authenticated.POST("/subscriptions/grant", h.Admin.GrantSubscription)
 			authenticated.POST("/subscriptions/:id/revoke", h.Admin.RevokeSubscription)
 			authenticated.GET("/transactions", h.Admin.GetTransactions)
+
+			// Balance top-ups
+			authenticated.GET("/topups", h.Admin.GetTopups)
+			authenticated.POST("/topups/:id/approve", h.Admin.ApproveTopup)
+			authenticated.POST("/topups/:id/reject", h.Admin.RejectTopup)
+			authenticated.GET("/topups/cheque/:filename", h.Admin.ServeChequeImage)
 
 			// Reports
 			authenticated.GET("/reports", h.Admin.GetReports)

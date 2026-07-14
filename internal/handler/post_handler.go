@@ -3,9 +3,11 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -309,8 +311,27 @@ func (h *PostHandler) CreatePost(c *gin.Context) {
 		Status:      domain.PostStatusActive,
 	}
 
+	// Publishing a post costs a fixed fee, deducted from the user's balance.
+	if err := h.userRepo.DeductBalance(c.Request.Context(), userID, domain.PostCostUZS); err != nil {
+		if errors.Is(err, domain.ErrInsufficientBalance) {
+			c.JSON(http.StatusPaymentRequired, ErrorResponse{
+				Success: false,
+				Message: fmt.Sprintf("Insufficient balance. Publishing a post costs %d UZS — please top up your balance.", domain.PostCostUZS),
+				Code:    "INSUFFICIENT_BALANCE",
+			})
+			return
+		}
+		h.logger.Error().Err(err).Str("userID", userID.String()).Msg("failed to charge post fee")
+		Error(c, err)
+		return
+	}
+
 	if err := h.postRepo.Create(c.Request.Context(), post); err != nil {
 		h.logger.Error().Err(err).Str("userID", userID.String()).Msg("failed to create post")
+		// Refund the fee if the post could not be created
+		if refundErr := h.userRepo.AddBalance(c.Request.Context(), userID, domain.PostCostUZS); refundErr != nil {
+			h.logger.Error().Err(refundErr).Str("userID", userID.String()).Msg("failed to refund post fee")
+		}
 		Error(c, err)
 		return
 	}
