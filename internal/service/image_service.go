@@ -62,13 +62,13 @@ func (s *ImageService) ProcessPostImage(filePath string) (*ProcessedImage, error
 		mimeType = "image/heic"
 	}
 
-	// TODO: Use imaging library to resize and create thumbnail
-	// For now, return the original path
-	thumbnailPath := strings.TrimSuffix(filePath, ext) + "_thumb" + ext
-
+	// No thumbnail generation yet: leave ThumbnailPath empty so the
+	// frontend falls back to the original image. (Previously this
+	// returned a _thumb path for a file that was never created,
+	// producing 404s for every post image.)
 	return &ProcessedImage{
 		OriginalPath:  filePath,
-		ThumbnailPath: thumbnailPath,
+		ThumbnailPath: "",
 		Filename:      filepath.Base(filePath),
 		Size:          info.Size(),
 		MimeType:      mimeType,
