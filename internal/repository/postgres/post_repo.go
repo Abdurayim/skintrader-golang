@@ -161,6 +161,45 @@ func (r *PostRepo) loadPostImages(ctx context.Context, postID uuid.UUID) ([]*dom
 	return images, nil
 }
 
+// loadImagesForPosts batch-loads images for a set of posts in one query
+// and attaches them to each post.
+func (r *PostRepo) loadImagesForPosts(ctx context.Context, posts []*domain.Post) error {
+	if len(posts) == 0 {
+		return nil
+	}
+
+	ids := make([]uuid.UUID, len(posts))
+	byID := make(map[uuid.UUID]*domain.Post, len(posts))
+	for i, p := range posts {
+		ids[i] = p.ID
+		byID[p.ID] = p
+		if p.Images == nil {
+			p.Images = []*domain.PostImage{}
+		}
+	}
+
+	rows, err := r.pool.Query(ctx, `
+		SELECT id, post_id, original_path, thumbnail_path, filename, size, mime_type, sort_order, uploaded_at
+		FROM post_images
+		WHERE post_id = ANY($1)
+		ORDER BY post_id, sort_order`, ids)
+	if err != nil {
+		return fmt.Errorf("querying images for posts: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		img, err := scanPostImage(rows)
+		if err != nil {
+			return fmt.Errorf("scanning post image row: %w", err)
+		}
+		if p, ok := byID[img.PostID]; ok {
+			p.Images = append(p.Images, img)
+		}
+	}
+	return rows.Err()
+}
+
 func (r *PostRepo) Create(ctx context.Context, post *domain.Post) error {
 	if post.ID == uuid.Nil {
 		post.ID = uuid.New()
@@ -231,6 +270,9 @@ func (r *PostRepo) FindActive(ctx context.Context, limit, offset int) ([]*domain
 	if err != nil {
 		return nil, 0, err
 	}
+	if err := r.loadImagesForPosts(ctx, posts); err != nil {
+		return nil, 0, err
+	}
 	return posts, total, nil
 }
 
@@ -254,6 +296,9 @@ func (r *PostRepo) FindByUser(ctx context.Context, userID uuid.UUID, limit, offs
 	}
 	posts, err := scanPosts(rows)
 	if err != nil {
+		return nil, 0, err
+	}
+	if err := r.loadImagesForPosts(ctx, posts); err != nil {
 		return nil, 0, err
 	}
 	return posts, total, nil
@@ -291,6 +336,9 @@ func (r *PostRepo) FindByUserWithStatus(ctx context.Context, userID uuid.UUID, s
 	if err != nil {
 		return nil, 0, err
 	}
+	if err := r.loadImagesForPosts(ctx, posts); err != nil {
+		return nil, 0, err
+	}
 	return posts, total, nil
 }
 
@@ -320,6 +368,9 @@ func (r *PostRepo) Search(ctx context.Context, query string, limit, offset int) 
 	}
 	posts, err := scanPosts(rows)
 	if err != nil {
+		return nil, 0, err
+	}
+	if err := r.loadImagesForPosts(ctx, posts); err != nil {
 		return nil, 0, err
 	}
 	return posts, total, nil
@@ -523,6 +574,9 @@ func (r *PostRepo) ListWithFilters(ctx context.Context, filter domain.PostListFi
 	}
 	posts, err := scanPosts(rows)
 	if err != nil {
+		return nil, 0, err
+	}
+	if err := r.loadImagesForPosts(ctx, posts); err != nil {
 		return nil, 0, err
 	}
 	return posts, total, nil
